@@ -1,67 +1,78 @@
 import pytest
 
-
-def test_selected_bun_is_used_in_price(burger, bun):
-    burger.set_buns(bun)
-    assert burger.get_price() == 200
-
-
-def test_added_ingredient_is_used_in_price(burger, bun, ingredients):
-    burger.set_buns(bun)
-    burger.add_ingredient(ingredients[0])
-    assert burger.get_price() == 225
-
-
-@pytest.mark.parametrize(
-    "index, remaining",
-    [(0, 1), (1, 0)],
-    ids=["first", "second"],
+from data import (
+    BUN_ONLY_PRICE,
+    BURGER_WITH_FILLING_PRICE,
+    BURGER_WITH_SAUCE_PRICE,
+    FULL_BURGER_PRICE,
+    RECEIPT_WITH_FILLING_AND_SAUCE,
+    RECEIPT_WITH_SAUCE_AND_FILLING,
 )
-def test_ingredient_is_removed_by_index(burger, ingredients, index, remaining):
-    for ingredient in ingredients:
-        burger.add_ingredient(ingredient)
-    burger.remove_ingredient(index)
-    assert burger.ingredients == [ingredients[remaining]]
 
 
-@pytest.mark.parametrize(
-    "index, new_index, order",
-    [(0, 1, (1, 0)), (1, 0, (1, 0))],
-    ids=["move_forward", "move_back"],
-)
-def test_ingredient_is_moved_to_new_index(
-    burger, ingredients, index, new_index, order
-):
-    for ingredient in ingredients:
-        burger.add_ingredient(ingredient)
-    burger.move_ingredient(index, new_index)
-    assert burger.ingredients == [ingredients[item] for item in order]
+class TestBurger:
+    def test_set_buns_sets_bun_for_price(self, burger, bun):
+        burger.set_buns(bun)
+        assert burger.get_price() == BUN_ONLY_PRICE
 
+    def test_add_ingredient_adds_ingredient_to_price(
+        self, burger, bun, ingredients
+    ):
+        burger.set_buns(bun)
+        burger.add_ingredient(ingredients[0])
+        assert burger.get_price() == BURGER_WITH_SAUCE_PRICE
 
-@pytest.mark.parametrize(
-    "count, price",
-    [(0, 200), (2, 300)],
-    ids=["bun_only", "full_burger"],
-)
-def test_price_contains_bun_twice_and_ingredients(
-    burger, bun, ingredients, count, price
-):
-    burger.set_buns(bun)
-    for ingredient in ingredients[:count]:
-        burger.add_ingredient(ingredient)
-    assert burger.get_price() == price
-
-
-def test_receipt_contains_bun_ingredients_and_price(burger, bun, ingredients):
-    burger.set_buns(bun)
-    for ingredient in ingredients:
-        burger.add_ingredient(ingredient)
-    receipt = (
-        "(==== Краторная булка ====)\n"
-        "= sauce Соус с шипами Антарианского "
-        "плоскоходца =\n"
-        "= filling Мясо бессмертных моллюсков Protostomia =\n"
-        "(==== Краторная булка ====)\n\n"
-        "Price: 300"
+    @pytest.mark.parametrize(
+        "index, expected_price",
+        [
+            (0, BURGER_WITH_FILLING_PRICE),
+            (1, BURGER_WITH_SAUCE_PRICE),
+        ],
+        ids=["remove_sauce", "remove_filling"],
     )
-    assert burger.get_receipt() == receipt
+    def test_remove_ingredient_removes_ingredient_from_price(
+        self, burger, bun, ingredients, index, expected_price
+    ):
+        burger.set_buns(bun)
+        for ingredient in ingredients:
+            burger.add_ingredient(ingredient)
+        burger.remove_ingredient(index)
+        assert burger.get_price() == expected_price
+
+    @pytest.mark.parametrize(
+        "index, new_index, expected_receipt",
+        [
+            (0, 1, RECEIPT_WITH_FILLING_AND_SAUCE),
+            (1, 0, RECEIPT_WITH_FILLING_AND_SAUCE),
+        ],
+        ids=["move_sauce_forward", "move_filling_back"],
+    )
+    def test_move_ingredient_changes_ingredient_order(
+        self, burger, bun, ingredients, index, new_index, expected_receipt
+    ):
+        burger.set_buns(bun)
+        for ingredient in ingredients:
+            burger.add_ingredient(ingredient)
+        burger.move_ingredient(index, new_index)
+        assert burger.get_receipt() == expected_receipt
+
+    @pytest.mark.parametrize(
+        "count, expected_price",
+        [(0, BUN_ONLY_PRICE), (2, FULL_BURGER_PRICE)],
+        ids=["bun_only", "burger_with_ingredients"],
+    )
+    def test_get_price_calculates_bun_and_ingredients(
+        self, burger, bun, ingredients, count, expected_price
+    ):
+        burger.set_buns(bun)
+        for ingredient in ingredients[:count]:
+            burger.add_ingredient(ingredient)
+        assert burger.get_price() == expected_price
+
+    def test_get_receipt_returns_burger_description(
+        self, burger, bun, ingredients
+    ):
+        burger.set_buns(bun)
+        for ingredient in ingredients:
+            burger.add_ingredient(ingredient)
+        assert burger.get_receipt() == RECEIPT_WITH_SAUCE_AND_FILLING
